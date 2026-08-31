@@ -28,12 +28,15 @@ export interface EditorContextValue {
   cursorPosition: { line: number; column: number };
   stats: DocumentStats;
   isAttachmentModalOpen: boolean;
+  isShareModalOpen: boolean;
   isDragOver: boolean;
   theme: "light" | "dark" | "system";
   syncSource: "none" | "raw" | "preview" | "external";
   canUndo: boolean;
   canRedo: boolean;
   isSyncScrollEnabled: boolean;
+  parentShareToken: string | null;
+  sharedExpiresAt: string | null;
   // Actions
   setMarkdown: (content: string, source?: "raw" | "preview" | "external") => void;
   setFileName: (name: string) => void;
@@ -41,11 +44,14 @@ export interface EditorContextValue {
   setPreviewEditMode: (mode: PreviewEditMode) => void;
   setCursorPosition: (pos: { line: number; column: number }) => void;
   setIsAttachmentModalOpen: (open: boolean) => void;
+  setIsShareModalOpen: (open: boolean) => void;
   setIsDragOver: (dragOver: boolean) => void;
   setTheme: (theme: "light" | "dark" | "system") => void;
   toggleTheme: () => void;
   setIsSyncScrollEnabled: (enabled: boolean) => void;
   toggleSyncScroll: () => void;
+  setParentShareToken: (token: string | null) => void;
+  setSharedExpiresAt: (expiresAt: string | null) => void;
   insertSnippet: (generator: SnippetGenerator) => void;
   registerEditorRef: (ref: HTMLTextAreaElement | null) => void;
   registerPreviewRef: (ref: HTMLDivElement | null) => void;
@@ -70,10 +76,24 @@ const EditorContext = createContext<EditorContextValue | undefined>(undefined);
 
 const MAX_HISTORY = 50;
 
-export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const initialSample = SAMPLE_DOCUMENTS[0];
-  const [markdown, setMarkdownState] = useState<string>(initialSample.content);
-  const [fileName, setFileName] = useState<string>("welcome.md");
+export interface EditorProviderProps {
+  children: React.ReactNode;
+  initialMarkdown?: string;
+  initialFileName?: string;
+  initialParentToken?: string | null;
+  initialExpiresAt?: string | null;
+}
+
+export const EditorProvider: React.FC<EditorProviderProps> = ({
+  children,
+  initialMarkdown,
+  initialFileName,
+  initialParentToken = null,
+  initialExpiresAt = null,
+}) => {
+  const defaultSample = SAMPLE_DOCUMENTS[0];
+  const [markdown, setMarkdownState] = useState<string>(initialMarkdown !== undefined ? initialMarkdown : defaultSample.content);
+  const [fileName, setFileName] = useState<string>(initialFileName || (initialMarkdown !== undefined ? "shared-document.md" : "welcome.md"));
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [previewEditMode, setPreviewEditMode] = useState<PreviewEditMode>("visual-edit");
@@ -82,8 +102,12 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     column: number;
   }>({ line: 1, column: 1 });
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState<boolean>(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [isSyncScrollEnabled, setIsSyncScrollEnabled] = useState<boolean>(true);
+  const [parentShareToken, setParentShareToken] = useState<string | null>(initialParentToken);
+  const [sharedExpiresAt, setSharedExpiresAt] = useState<string | null>(initialExpiresAt);
+
   const [theme, setThemeState] = useState<"light" | "dark" | "system">(() => {
     if (typeof window !== "undefined") {
       try {
@@ -98,7 +122,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [syncSource, setSyncSource] = useState<"none" | "raw" | "preview" | "external">("none");
 
   // Undo / Redo history
-  const [history, setHistory] = useState<string[]>([initialSample.content]);
+  const [history, setHistory] = useState<string[]>([initialMarkdown !== undefined ? initialMarkdown : defaultSample.content]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
 
   // Element refs for focus, scroll sync, and snippet insertion
@@ -136,25 +160,26 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         localStorage.setItem("md-editor-theme", newTheme);
       } catch {
-        // LocalStorage access might fail in restricted environments
+        // ignore
       }
     },
     [applyTheme],
   );
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  }, [setTheme, theme]);
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+  }, [theme, setTheme]);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme, applyTheme]);
 
   const toggleSyncScroll = useCallback(() => {
     setIsSyncScrollEnabled((prev) => !prev);
   }, []);
 
-  // Initialize theme from storage or default
-  useEffect(() => {
-    applyTheme(theme);
-  }, [applyTheme, theme]);
-
+  // Register element refs
   const registerEditorRef = useCallback((ref: HTMLTextAreaElement | null) => {
     editorTextareaRef.current = ref;
   }, []);
@@ -171,33 +196,30 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     lineNumbersRef.current = ref;
   }, []);
 
-  // Bidirectional synchronized scrolling
+  // Synchronized scrolling handlers
   const handleEditorScroll = useCallback(() => {
-    const editorEl = editorTextareaRef.current;
-    if (!editorEl) return;
-
-    // Synchronize line numbers column with editor textarea
-    if (lineNumbersRef.current) {
-      lineNumbersRef.current.scrollTop = editorEl.scrollTop;
-    }
-
     if (!isSyncScrollEnabled) return;
-    if (scrollSourceRef.current === "preview") return;
+    const editor = editorTextareaRef.current;
+    const preview = previewScrollContainerRef.current;
+    const lineNumbers = lineNumbersRef.current;
 
-    const previewEl = previewScrollContainerRef.current;
-    if (!previewEl) return;
-
-    scrollSourceRef.current = "editor";
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-
-    const editorMax = editorEl.scrollHeight - editorEl.clientHeight;
-    const previewMax = previewEl.scrollHeight - previewEl.clientHeight;
-
-    if (editorMax > 0 && previewMax > 0) {
-      const scrollRatio = editorEl.scrollTop / editorMax;
-      previewEl.scrollTop = scrollRatio * previewMax;
+    if (editor && lineNumbers) {
+      lineNumbers.scrollTop = editor.scrollTop;
     }
 
+    if (!editor || !preview) return;
+
+    if (scrollSourceRef.current === "preview") return;
+    scrollSourceRef.current = "editor";
+
+    const editorScrollable = editor.scrollHeight - editor.clientHeight;
+    if (editorScrollable > 0) {
+      const scrollPercentage = editor.scrollTop / editorScrollable;
+      const previewScrollable = preview.scrollHeight - preview.clientHeight;
+      preview.scrollTop = scrollPercentage * previewScrollable;
+    }
+
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
     scrollTimerRef.current = setTimeout(() => {
       scrollSourceRef.current = null;
     }, 100);
@@ -205,121 +227,141 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const handlePreviewScroll = useCallback(() => {
     if (!isSyncScrollEnabled) return;
+    const editor = editorTextareaRef.current;
+    const preview = previewScrollContainerRef.current;
+
+    if (!editor || !preview) return;
+
     if (scrollSourceRef.current === "editor") return;
-
-    const previewEl = previewScrollContainerRef.current;
-    const editorEl = editorTextareaRef.current;
-    if (!previewEl || !editorEl) return;
-
     scrollSourceRef.current = "preview";
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
 
-    const previewMax = previewEl.scrollHeight - previewEl.clientHeight;
-    const editorMax = editorEl.scrollHeight - editorEl.clientHeight;
-
-    if (previewMax > 0 && editorMax > 0) {
-      const scrollRatio = previewEl.scrollTop / previewMax;
-      editorEl.scrollTop = scrollRatio * editorMax;
-      if (lineNumbersRef.current) {
-        lineNumbersRef.current.scrollTop = editorEl.scrollTop;
-      }
+    const previewScrollable = preview.scrollHeight - preview.clientHeight;
+    if (previewScrollable > 0) {
+      const scrollPercentage = preview.scrollTop / previewScrollable;
+      const editorScrollable = editor.scrollHeight - editor.clientHeight;
+      editor.scrollTop = scrollPercentage * editorScrollable;
     }
 
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
     scrollTimerRef.current = setTimeout(() => {
       scrollSourceRef.current = null;
     }, 100);
   }, [isSyncScrollEnabled]);
 
-  // Update markdown and manage undo history
-  const setMarkdown = useCallback(
-    (newContent: string, source: "raw" | "preview" | "external" = "raw") => {
-      if (isInternalUpdatingRef.current) return;
-
-      setSyncSource(source);
-      setMarkdownState(newContent);
-      setIsDirty(true);
-
-      // Add to history with debounce/branching
+  // Push new state into history stack
+  const pushHistory = useCallback(
+    (newContent: string) => {
       setHistory((prev) => {
         const sliced = prev.slice(0, historyIndex + 1);
         if (sliced[sliced.length - 1] === newContent) return prev;
-        const next = [...sliced, newContent];
-        if (next.length > MAX_HISTORY) next.shift();
-        return next;
+        const updated = [...sliced, newContent];
+        if (updated.length > MAX_HISTORY) updated.shift();
+        return updated;
       });
-      setHistoryIndex((prev) => {
-        const nextIdx = Math.min(prev + 1, MAX_HISTORY - 1);
-        return nextIdx;
-      });
+      setHistoryIndex((prev) => Math.min(prev + 1, MAX_HISTORY - 1));
     },
     [historyIndex],
   );
 
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      const targetIndex = historyIndex - 1;
-      const targetContent = history[targetIndex];
+  // Update markdown with history tracking
+  const setMarkdown = useCallback(
+    (newContent: string, source: "raw" | "preview" | "external" = "raw") => {
+      if (newContent === markdown) return;
       isInternalUpdatingRef.current = true;
-      setMarkdownState(targetContent);
-      setHistoryIndex(targetIndex);
-      setSyncSource("raw");
+      setSyncSource(source);
+      setMarkdownState(newContent);
+      setIsDirty(true);
+
+      if (source !== "external") {
+        pushHistory(newContent);
+      }
+
       setTimeout(() => {
         isInternalUpdatingRef.current = false;
       }, 50);
+    },
+    [markdown, pushHistory],
+  );
+
+  // Undo / Redo Actions
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const prevContent = history[newIndex];
+      setMarkdownState(prevContent);
+      setSyncSource("external");
+      setIsDirty(true);
     }
   }, [history, historyIndex]);
 
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      const targetIndex = historyIndex + 1;
-      const targetContent = history[targetIndex];
-      isInternalUpdatingRef.current = true;
-      setMarkdownState(targetContent);
-      setHistoryIndex(targetIndex);
-      setSyncSource("raw");
-      setTimeout(() => {
-        isInternalUpdatingRef.current = false;
-      }, 50);
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const nextContent = history[newIndex];
+      setMarkdownState(nextContent);
+      setSyncSource("external");
+      setIsDirty(true);
     }
   }, [history, historyIndex]);
 
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
-
-  // Insert markdown snippet into raw editor at current cursor position
+  // Insert snippet / format selection
   const insertSnippet = useCallback(
     (generator: SnippetGenerator) => {
       const textarea = editorTextareaRef.current;
-      if (!textarea) {
-        // Fallback: append snippet to bottom
-        const result = generator("");
-        setMarkdown(markdown + "\n\n" + result.text, "raw");
-        return;
-      }
+      if (!textarea) return;
 
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const selectedText = textarea.value.substring(start, end);
-      const result = generator(selectedText);
+      const selectedText = markdown.substring(start, end);
 
-      const before = textarea.value.substring(0, start);
-      const after = textarea.value.substring(end);
-      const nextContent = before + result.text + after;
+      const { text, cursorOffset, selectionLength } = generator(selectedText);
 
-      setMarkdown(nextContent, "raw");
+      const before = markdown.substring(0, start);
+      const after = markdown.substring(end);
+      const newMarkdown = before + text + after;
 
-      // Restore and position cursor
+      setMarkdown(newMarkdown, "raw");
+
       setTimeout(() => {
         textarea.focus();
-        const newCursorPos = start + (result.cursorOffset !== undefined ? result.cursorOffset : result.text.length);
-        const selLength = result.selectionLength || 0;
-        textarea.setSelectionRange(newCursorPos, newCursorPos + selLength);
+        const newCursorPos = cursorOffset !== undefined ? start + cursorOffset : start + text.length;
+        const newSelLength = selectionLength || 0;
+        textarea.setSelectionRange(newCursorPos, newCursorPos + newSelLength);
       }, 0);
     },
     [markdown, setMarkdown],
   );
 
-  // Load a file from disk
+  // Toggle checklist checkbox
+  const toggleTaskCheckbox = useCallback(
+    (taskIndex: number) => {
+      const checkboxRegex = /^\s*[-*+]\s+\[([ xX])\]\s+/gm;
+      let match: RegExpExecArray | null;
+      let currentIndex = 0;
+      let targetStart = -1;
+      let currentCheckChar = " ";
+
+      while ((match = checkboxRegex.exec(markdown)) !== null) {
+        if (currentIndex === taskIndex) {
+          targetStart = match.index + match[0].indexOf("[") + 1;
+          currentCheckChar = match[1];
+          break;
+        }
+        currentIndex++;
+      }
+
+      if (targetStart !== -1) {
+        const newChar = currentCheckChar === " " ? "x" : " ";
+        const updated = markdown.substring(0, targetStart) + newChar + markdown.substring(targetStart + 1);
+        setMarkdown(updated, "preview");
+      }
+    },
+    [markdown, setMarkdown],
+  );
+
+  // Load uploaded local file
   const loadFile = useCallback(
     async (file: File): Promise<boolean> => {
       try {
@@ -327,8 +369,12 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setMarkdown(text, "external");
         setFileName(file.name);
         setIsDirty(false);
+        setParentShareToken(null);
+        setSharedExpiresAt(null);
+        setHistory([text]);
+        setHistoryIndex(0);
         return true;
-      } catch (err: unknown) {
+      } catch (err) {
         console.error("Error reading file:", err);
         return false;
       }
@@ -336,32 +382,47 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [setMarkdown],
   );
 
-  // Load a preset sample document
+  // Load sample template
   const loadSample = useCallback(
     (sampleId: string) => {
-      const sample = SAMPLE_DOCUMENTS.find((s) => s.id === sampleId);
-      if (sample) {
-        setMarkdown(sample.content, "external");
-        setFileName(`${sample.id}.md`);
-        setIsDirty(false);
-      }
+      const sample = SAMPLE_DOCUMENTS.find((s) => s.id === sampleId) || SAMPLE_DOCUMENTS[0];
+      setMarkdown(sample.content, "external");
+      setFileName(`${sample.id}.md`);
+      setIsDirty(false);
+      setParentShareToken(null);
+      setSharedExpiresAt(null);
+      setHistory([sample.content]);
+      setHistoryIndex(0);
     },
     [setMarkdown],
   );
 
-  // Create new blank document
+  // Create fresh blank document
   const createNewFile = useCallback(
     (defaultName: string = "untitled.md") => {
-      setMarkdown("# Untitled Document\n\nStart writing markdown here...", "external");
+      const initialText = `# Untitled Document\n\nStart writing your markdown here...\n`;
+      setMarkdown(initialText, "external");
       setFileName(defaultName);
       setIsDirty(false);
+      setParentShareToken(null);
+      setSharedExpiresAt(null);
+      setHistory([initialText]);
+      setHistoryIndex(0);
     },
     [setMarkdown],
   );
 
-  // Download raw markdown file
+  // Format document
+  const formatDocument = useCallback(() => {
+    const formatted = formatMarkdownContent(markdown);
+    setMarkdown(formatted, "external");
+  }, [markdown, setMarkdown]);
+
+  // Export / Download handlers
   const downloadMarkdown = useCallback(() => {
-    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const blob = new Blob([markdown], {
+      type: "text/markdown;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -373,44 +434,50 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsDirty(false);
   }, [markdown, fileName]);
 
-  // Download converted HTML document
   const downloadHtml = useCallback(() => {
-    const bodyHtml = markdownToHtml(markdown);
+    const rawHtml = markdownToHtml(markdown);
     const fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${fileName.replace(/\.md$/, "")}</title>
+  <title>${fileName}</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
-    h1, h2, h3 { color: #111; margin-top: 1.5em; }
-    pre { background: #f4f4f5; padding: 16px; border-radius: 8px; overflow-x: auto; }
-    code { font-family: monospace; background: #f4f4f5; padding: 2px 6px; border-radius: 4px; }
-    pre code { padding: 0; background: none; }
-    blockquote { border-left: 4px solid #e4e4e7; margin: 0; padding-left: 16px; color: #71717a; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    th, td { border: 1px solid #e4e4e7; padding: 8px 12px; text-align: left; }
-    th { background: #f4f4f5; }
-    hr { border: none; border-top: 1px solid #e4e4e7; margin: 2em 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 860px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #24292e;
+    }
+    pre { background: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; }
+    code { font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace; font-size: 85%; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    th, td { border: 1px solid #dfe2e5; padding: 6px 13px; text-align: left; }
+    th { background: #f6f8fa; }
+    blockquote { border-left: 4px solid #dfe2e5; margin: 0; padding: 0 16px; color: #6a737d; }
+    hr { border: none; border-top: 1px solid #dfe2e5; margin: 24px 0; }
   </style>
 </head>
 <body>
-  ${bodyHtml}
+  ${rawHtml}
 </body>
 </html>`;
-    const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+
+    const blob = new Blob([fullHtml], {
+      type: "text/html;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${fileName.replace(/\.md$/, "")}.html`;
+    a.download = `${fileName.replace(/\.md$/i, "")}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, [markdown, fileName]);
 
-  // Copy raw markdown to clipboard
   const copyMarkdown = useCallback(async (): Promise<boolean> => {
     try {
       await navigator.clipboard.writeText(markdown);
@@ -420,7 +487,6 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [markdown]);
 
-  // Copy rendered HTML to clipboard
   const copyHtml = useCallback(async (): Promise<boolean> => {
     try {
       const html = markdownToHtml(markdown);
@@ -431,42 +497,8 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [markdown]);
 
-  // Format document
-  const formatDocument = useCallback(() => {
-    const formatted = formatMarkdownContent(markdown);
-    if (formatted !== markdown) {
-      setMarkdown(formatted, "raw");
-    }
-  }, [markdown, setMarkdown]);
-
-  // Interactive task checkbox toggle (finds N-th task in markdown and flips checked state)
-  const toggleTaskCheckbox = useCallback(
-    (taskIndex: number) => {
-      const lines = markdown.split(/\r\n|\r|\n/);
-      let currentTaskCount = 0;
-      let updated = false;
-
-      const newLines = lines.map((line) => {
-        const match = line.match(/^(\s*[-*+]\s+\[)([ xX])(\]\s+.*)$/);
-        if (match) {
-          if (currentTaskCount === taskIndex) {
-            const isChecked = match[2].toLowerCase() === "x";
-            const newStatus = isChecked ? " " : "x";
-            updated = true;
-            currentTaskCount++;
-            return `${match[1]}${newStatus}${match[3]}`;
-          }
-          currentTaskCount++;
-        }
-        return line;
-      });
-
-      if (updated) {
-        setMarkdown(newLines.join("\n"), "preview");
-      }
-    },
-    [markdown, setMarkdown],
-  );
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
 
   const value: EditorContextValue = {
     markdown,
@@ -477,23 +509,29 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     cursorPosition,
     stats,
     isAttachmentModalOpen,
+    isShareModalOpen,
     isDragOver,
     theme,
     syncSource,
     canUndo,
     canRedo,
     isSyncScrollEnabled,
+    parentShareToken,
+    sharedExpiresAt,
     setMarkdown,
     setFileName,
     setViewMode,
     setPreviewEditMode,
     setCursorPosition,
     setIsAttachmentModalOpen,
+    setIsShareModalOpen,
     setIsDragOver,
     setTheme,
     toggleTheme,
     setIsSyncScrollEnabled,
     toggleSyncScroll,
+    setParentShareToken,
+    setSharedExpiresAt,
     insertSnippet,
     registerEditorRef,
     registerPreviewRef,
@@ -517,10 +555,10 @@ export const EditorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 };
 
-export function useEditorContext(): EditorContextValue {
+export const useEditorContext = (): EditorContextValue => {
   const context = useContext(EditorContext);
   if (!context) {
     throw new Error("useEditorContext must be used within an EditorProvider");
   }
   return context;
-}
+};

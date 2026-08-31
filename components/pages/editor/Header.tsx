@@ -32,6 +32,7 @@ import {
   FileCheckIcon,
   Edit2Icon,
   ArrowUpDownIcon,
+  Share2Icon,
 } from "lucide-react";
 import { SAMPLE_DOCUMENTS } from "@/lib/markdown-utils";
 
@@ -47,6 +48,7 @@ export const Header: React.FC = () => {
     isSyncScrollEnabled,
     toggleSyncScroll,
     setIsAttachmentModalOpen,
+    setIsShareModalOpen,
     createNewFile,
     downloadMarkdown,
     downloadHtml,
@@ -113,7 +115,7 @@ export const Header: React.FC = () => {
           <Badge
             variant={isDirty ? "outline" : "secondary"}
             className={`text-[10px] h-4 px-1.5 font-normal tracking-wide transition-colors ${
-              isDirty ? "border-amber-500/50 text-amber-500" : "text-emerald-500"
+              isDirty ? "border-amber-500/50 text-amber-500" : "text-emerald-500 dark:text-emerald-400"
             }`}
           >
             {isDirty ? "Unsaved" : "Synced"}
@@ -139,6 +141,24 @@ export const Header: React.FC = () => {
             <span>Attach .md File</span>
           </TooltipTrigger>
           <TooltipContent>Import local Markdown or text file</TooltipContent>
+        </Tooltip>
+
+        {/* Share Button */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsShareModalOpen(true)}
+                className="text-xs gap-1.5 font-medium shadow-xs border border-primary/20 hover:border-primary/40 text-primary"
+              />
+            }
+          >
+            <Share2Icon className="size-3.5" />
+            <span>Share</span>
+          </TooltipTrigger>
+          <TooltipContent>Generate time-limited, secure share link with custom TTL</TooltipContent>
         </Tooltip>
 
         {/* New Document Button */}

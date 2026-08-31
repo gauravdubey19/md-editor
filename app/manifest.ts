@@ -2,14 +2,14 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Markdown Studio | Edit, Format & Live Preview",
+    name: "Markdown Studio | Edit, Format & Context Sharing",
     short_name: "Markdown Studio",
     description:
-      "A modern, bidirectional Markdown editor and interactive live preview environment with synchronized scrolling, file attachments, and shadcn/ui.",
+      "A modern, bidirectional Markdown editor and interactive live preview studio with synchronized scrolling, time-limited context sharing (TTL), and shadcn/ui.",
     start_url: "/",
     display: "standalone",
-    background_color: "#09090b",
-    theme_color: "#09090b",
+    background_color: "#000000",
+    theme_color: "#000000",
     icons: [
       {
         src: "/icon",

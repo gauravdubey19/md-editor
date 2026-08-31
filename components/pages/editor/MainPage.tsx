@@ -7,6 +7,7 @@ import { RawMarkdownEditor } from "./RawMarkdownEditor";
 import { EditablePreview } from "./EditablePreview";
 import { StatusBar } from "./StatusBar";
 import { FileAttachmentModal } from "./FileAttachmentModal";
+import { ShareModal } from "@/components/pages/share/ShareModal";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useEditorContext } from "@/context/EditorContext";
 import { UploadCloudIcon } from "lucide-react";
@@ -125,6 +126,9 @@ export const MainPage: React.FC = () => {
 
       {/* File Attachment Modal Dialog */}
       <FileAttachmentModal />
+
+      {/* Share Context Modal Dialog */}
+      <ShareModal />
     </div>
   );
 };

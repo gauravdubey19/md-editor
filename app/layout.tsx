@@ -35,11 +35,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Markdown Studio | Edit, Format & Interactive Live Preview",
+    default: "Markdown Studio | Bidirectional Markdown Editor & Context Sharing",
     template: "%s | Markdown Studio",
   },
   description:
-    "A modern, bidirectional Markdown editor and interactive live preview environment with synchronized scrolling, file attachments, GFM tables, interactive checklists, and shadcn/ui.",
+    "A modern, bidirectional Markdown editor and interactive live preview environment with synchronized scrolling, time-limited context sharing (TTL), copy-on-edit forking, file attachments, GFM tables, and shadcn/ui.",
   applicationName: "Markdown Studio",
   authors: [{ name: "Markdown Studio Team" }],
   generator: "Next.js",
@@ -47,10 +47,16 @@ export const metadata: Metadata = {
     "Markdown Editor",
     "Live Preview Markdown",
     "WYSIWYG Markdown",
+    "Context Sharing",
+    "Markdown Sharing",
+    "Time-Limited Markdown",
+    "Ephemeral Markdown",
+    "Copy-on-Edit Forking",
     "Next.js Markdown",
     "GFM Tables",
     "Interactive Checklists",
     "Synchronized Scrolling",
+    "MongoDB TTL Markdown",
     "shadcn UI",
     "TailwindCSS v4",
     "Web Markdown Studio",
@@ -68,9 +74,9 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "Markdown Studio",
-    title: "Markdown Studio | Bidirectional Markdown Editor & Live Interactive Preview",
+    title: "Markdown Studio | Bidirectional Markdown Editor & Context Sharing",
     description:
-      "Format in plaintext or click directly inside the live rendered preview to edit. Features synchronized scrolling, file drag-and-drop, GFM tables, and shadcn/ui.",
+      "Format in plaintext or click directly inside the live rendered preview to edit. Features synchronized scrolling, time-limited context sharing, copy-on-edit forking, and shadcn/ui.",
     images: [
       {
         url: "/og-image.png",
@@ -78,14 +84,15 @@ export const metadata: Metadata = {
         type: "image/png",
         width: 1200,
         height: 630,
-        alt: "Markdown Studio - Bidirectional Markdown Editor & Live Preview",
+        alt: "Markdown Studio - Bidirectional Markdown Editor & Context Sharing",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Markdown Studio | Bidirectional Markdown Editor & Live Preview",
-    description: "Edit Markdown in plaintext or directly in the visual preview with instant bidirectional sync and synchronized scrolling.",
+    title: "Markdown Studio | Bidirectional Markdown Editor & Context Sharing",
+    description:
+      "Edit Markdown in plaintext or directly in the visual preview with instant bidirectional sync, synchronized scrolling, and time-limited context sharing.",
     images: ["/og-image.png"],
     creator: "@markdownstudio",
   },
@@ -114,7 +121,7 @@ const jsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Any",
   description:
-    "A modern, bidirectional Markdown editor and interactive live preview environment with synchronized scrolling, file attachments, and shadcn/ui.",
+    "A modern, bidirectional Markdown editor and interactive live preview environment with synchronized scrolling, time-limited context sharing (TTL), copy-on-edit forking, file attachments, and shadcn/ui.",
   offers: {
     "@type": "Offer",
     price: "0",
@@ -123,10 +130,12 @@ const jsonLd = {
   featureList: [
     "Bidirectional live Markdown and WYSIWYG editing",
     "Synchronized scrolling across editor and preview",
+    "Time-limited context sharing with configurable TTL (5m - 30d)",
+    "Copy-on-edit forking model with ancestor lineage preservation",
     "GFM table and interactive checklist editing",
     "Local file drag-and-drop and attachment modal",
     "Export as Markdown or standalone HTML",
-    "Light and Dark mode support with shadcn/ui",
+    "Light and Dark mode support with shadcn/ui and .theme-cps palette",
   ],
 };
 
