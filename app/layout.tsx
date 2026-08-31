@@ -67,7 +67,9 @@ export const metadata: Metadata = {
       "Format in plaintext or click directly inside the live rendered preview to edit. Features synchronized scrolling, file drag-and-drop, GFM tables, and shadcn/ui.",
     images: [
       {
-        url: "/opengraph-image",
+        url: "/og-image.png",
+        secureUrl: "/og-image.png",
+        type: "image/png",
         width: 1200,
         height: 630,
         alt: "Markdown Studio - Bidirectional Markdown Editor & Live Preview",
@@ -78,7 +80,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Markdown Studio | Bidirectional Markdown Editor & Live Preview",
     description: "Edit Markdown in plaintext or directly in the visual preview with instant bidirectional sync and synchronized scrolling.",
-    images: ["/twitter-image"],
+    images: ["/og-image.png"],
     creator: "@markdownstudio",
   },
   robots: {
@@ -124,7 +126,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("h-full", "antialiased", "dark", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}>
+    <html lang="en" className={cn("h-full", "antialiased", "dark", "theme-cps", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}>
       <head>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
