@@ -9,155 +9,156 @@ export const contentType = "image/png";
 
 export default async function Image() {
   return new ImageResponse(
-    <div
-      style={{
-        height: "100%",
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#09090b",
-        backgroundImage:
-          "radial-gradient(circle at 25px 25px, #27272a 2%, transparent 0%), radial-gradient(circle at 75px 75px, #27272a 2%, transparent 0%)",
-        backgroundSize: "100px 100px",
-        color: "#fafafa",
-        padding: "60px 80px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-      }}
-    >
-      {/* Top Header */}
+    (
       <div
         style={{
+          height: "100%",
+          width: "100%",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "space-between",
-          width: "100%",
+          backgroundColor: "#000000",
+          color: "#ffffff",
+          padding: "50px 70px",
+          fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
+        {/* Top Bar */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "16px",
+            justifyContent: "space-between",
+            width: "100%",
           }}
         >
           <div
             style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "14px",
-              backgroundColor: "#3b82f6",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              color: "#ffffff",
-              fontSize: "24px",
-              fontWeight: "bold",
+              gap: "18px",
             }}
           >
-            M↓
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "16px",
+                background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontSize: "30px",
+                fontWeight: 900,
+                boxShadow: "0 4px 12px rgba(37, 99, 235, 0.4)",
+              }}
+            >
+              M↓
+            </div>
+            <span
+              style={{
+                fontSize: "34px",
+                fontWeight: 800,
+                letterSpacing: "-0.5px",
+                color: "#ffffff",
+              }}
+            >
+              Markdown Studio
+            </span>
           </div>
-          <span
+
+          <div
             style={{
-              fontSize: "28px",
-              fontWeight: "700",
-              letterSpacing: "-0.5px",
-              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: "rgba(59, 130, 246, 0.15)",
+              border: "1.5px solid rgba(59, 130, 246, 0.4)",
+              padding: "10px 22px",
+              borderRadius: "9999px",
+              color: "#93c5fd",
+              fontSize: "18px",
+              fontWeight: 700,
             }}
           >
-            Markdown Studio
-          </span>
+            Web App
+          </div>
         </div>
 
+        {/* Hero Content */}
         <div
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            gap: "8px",
-            backgroundColor: "rgba(59, 130, 246, 0.15)",
-            border: "1px solid rgba(59, 130, 246, 0.3)",
-            padding: "8px 18px",
-            borderRadius: "9999px",
-            color: "#60a5fa",
-            fontSize: "15px",
-            fontWeight: "600",
+            textAlign: "center",
+            maxWidth: "1020px",
+            margin: "20px 0",
           }}
         >
-          ⚡ Next.js 16 • TailwindCSS v4 • shadcn/ui
+          <h1
+            style={{
+              fontSize: "64px",
+              fontWeight: 900,
+              lineHeight: 1.1,
+              letterSpacing: "-2px",
+              margin: "0 0 16px 0",
+              color: "#ffffff",
+            }}
+          >
+            Bidirectional Markdown Editor
+          </h1>
+          <p
+            style={{
+              fontSize: "26px",
+              color: "#94a3b8",
+              margin: 0,
+              lineHeight: 1.4,
+              fontWeight: 500,
+            }}
+          >
+            Edit in plaintext or directly inside the live rendered preview with
+            instant two-way synchronization and synchronized scrolling.
+          </p>
         </div>
-      </div>
 
-      {/* Center Content */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          textAlign: "center",
-          maxWidth: "960px",
-        }}
-      >
-        <h1
+        {/* Feature Pills */}
+        <div
           style={{
-            fontSize: "56px",
-            fontWeight: "800",
-            lineHeight: 1.15,
-            letterSpacing: "-1.5px",
-            margin: 0,
-            background: "linear-gradient(to right, #ffffff, #a1a1aa)",
-            backgroundClip: "text",
-            color: "transparent",
+            display: "flex",
+            gap: "14px",
+            justifyContent: "center",
+            width: "100%",
           }}
         >
-          Bidirectional Markdown Editor & Interactive Live Studio
-        </h1>
-        <p
-          style={{
-            fontSize: "22px",
-            color: "#a1a1aa",
-            marginTop: "20px",
-            marginBottom: "0px",
-            lineHeight: 1.5,
-          }}
-        >
-          Format in plaintext or click directly inside the live rendered preview to edit. Complete with synchronized scrolling, file attachments, and
-          GFM support.
-        </p>
-      </div>
-
-      {/* Feature Badges Footer */}
-      <div
-        style={{
-          display: "flex",
-          gap: "14px",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          width: "100%",
-        }}
-      >
-        {["🔄 Two-Way Live Sync", "↕️ Synchronized Scrolling", "✏️ Live Preview Editing", "📎 File Attach & Dropzone", "📊 GFM Tables & Tasks"].map(
-          (feature, i) => (
+          {[
+            "🔄 Two-Way Live Sync",
+            "↕️ Synchronized Scrolling",
+            "✏️ Live Preview Editing",
+            "📎 File Attach & Drop",
+            "📊 GFM Tables & Tasks",
+          ].map((feature, i) => (
             <div
               key={i}
               style={{
-                backgroundColor: "#18181b",
-                border: "1px solid #27272a",
-                padding: "10px 18px",
+                backgroundColor: "#111827",
+                border: "1.5px solid #1e293b",
+                padding: "12px 20px",
                 borderRadius: "14px",
-                fontSize: "16px",
-                color: "#e4e4e7",
-                fontWeight: "500",
+                fontSize: "17px",
+                color: "#e2e8f0",
+                fontWeight: 600,
               }}
             >
               {feature}
             </div>
-          ),
-        )}
+          ))}
+        </div>
       </div>
-    </div>,
+    ),
     {
       ...size,
-    },
+    }
   );
 }
