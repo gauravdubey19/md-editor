@@ -1,11 +1,17 @@
 import type { MetadataRoute } from "next";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}`
+  : "https://preview-md.vercel.app");
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://markdown-studio.app/sitemap.xml",
+    sitemap: `${siteUrl}/sitemap.xml`,
   };
 }

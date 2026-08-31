@@ -16,6 +16,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}`
+  : "https://preview-md.vercel.app");
+
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
@@ -27,7 +33,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://markdown-studio.app"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Markdown Studio | Edit, Format & Interactive Live Preview",
     template: "%s | Markdown Studio",
@@ -60,7 +66,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://markdown-studio.app",
+    url: siteUrl,
     siteName: "Markdown Studio",
     title: "Markdown Studio | Bidirectional Markdown Editor & Live Interactive Preview",
     description:
@@ -104,7 +110,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "Markdown Studio",
-  url: "https://markdown-studio.app",
+  url: siteUrl,
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Any",
   description:
